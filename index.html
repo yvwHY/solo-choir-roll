@@ -82,8 +82,10 @@ const PRESET_VAR="_tone_0520_Aspirin_sf2_file";
 const HOLD=60, FADE=0.25;         // HOLD = loop length so a note never self-ends mid-scrub (idle cap 60s); FADE = soft tail on note-end
 const active={};                  // voice -> {note, env, g} currently sounding
 function ensureAudio(){ if(audioReady)return; AC=new (window.AudioContext||window.webkitAudioContext)();
-  player=new WebAudioFontPlayer(); PRESET=window[PRESET_VAR]; player.loader.decodeAfterLoading(AC,PRESET_VAR); audioReady=true; }
-addEventListener('pointerdown',ensureAudio);                                   // first touch unlocks mobile WebAudio
+  player=new WebAudioFontPlayer(); PRESET=window[PRESET_VAR];
+  try{ AC.resume(); const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource(); s.buffer=b; s.connect(AC.destination); s.start(0); }catch(e){}  // iOS unlock: resume + silent buffer in the gesture
+  player.loader.decodeAfterLoading(AC,PRESET_VAR); audioReady=true; }
+['pointerdown','touchend','click'].forEach(ev=>addEventListener(ev,ensureAudio));   // unlock mobile WebAudio on the first gesture (iOS)
 function trigger(midi,gain){ if(!audioReady)return; if(AC.state==='suspended')AC.resume();
   player.queueWaveTable(AC, AC.destination, PRESET, AC.currentTime, midi, 0.5, gain); }   // one-shot (note-add preview, Task 6)
 function voiceNoteAt(v,p){ const ns=seqOf(v);                                  // the note this voice should sound at playhead p

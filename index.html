@@ -88,10 +88,12 @@ let AC=null, player=null, PRESET=null, audioReady=false;
 const PRESET_VAR="_tone_0520_Aspirin_sf2_file";
 const HOLD=60, FADE=0.25;         // HOLD = loop length so a note never self-ends mid-scrub (idle cap 60s); FADE = soft tail on note-end
 const active={};                  // voice -> {note, env, g} currently sounding
-function ensureAudio(){ if(audioReady)return; AC=new (window.AudioContext||window.webkitAudioContext)();
-  player=new WebAudioFontPlayer(); PRESET=window[PRESET_VAR];
-  try{ AC.resume(); const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource(); s.buffer=b; s.connect(AC.destination); s.start(0); }catch(e){}  // iOS unlock: resume + silent buffer in the gesture
-  player.loader.decodeAfterLoading(AC,PRESET_VAR); audioReady=true; }
+function initAudio(){ if(AC)return; try{ AC=new (window.AudioContext||window.webkitAudioContext)();   // decode at LOAD so the first swipe already has samples
+  player=new WebAudioFontPlayer(); PRESET=window[PRESET_VAR]; player.loader.decodeAfterLoading(AC,PRESET_VAR); }catch(e){} }
+function ensureAudio(){ if(audioReady)return; initAudio(); if(!AC)return;                              // first gesture: just resume/unlock (iOS)
+  try{ AC.resume(); const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource(); s.buffer=b; s.connect(AC.destination); s.start(0); }catch(e){}
+  audioReady=true; }
+initAudio();                                                                       // pre-decode the soundfont on page load (suspended context is fine)
 ['pointerdown','touchend','click'].forEach(ev=>addEventListener(ev,ensureAudio));   // unlock mobile WebAudio on the first gesture (iOS)
 function trigger(midi,gain){ if(!audioReady)return; if(AC.state==='suspended')AC.resume();
   player.queueWaveTable(AC, AC.destination, PRESET, AC.currentTime, midi, 0.5, gain); }   // one-shot (note-add preview, Task 6)

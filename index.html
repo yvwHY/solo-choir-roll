@@ -88,13 +88,13 @@ let AC=null, player=null, PRESET=null, audioReady=false;
 const PRESET_VAR="_tone_0520_Aspirin_sf2_file";
 const HOLD=60, FADE=0.25;         // HOLD = loop length so a note never self-ends mid-scrub (idle cap 60s); FADE = soft tail on note-end
 const active={};                  // voice -> {note, env, g} currently sounding
-function initAudio(){ if(AC)return; try{ AC=new (window.AudioContext||window.webkitAudioContext)();   // decode at LOAD so the first swipe already has samples
-  player=new WebAudioFontPlayer(); PRESET=window[PRESET_VAR]; player.loader.decodeAfterLoading(AC,PRESET_VAR); }catch(e){} }
-function ensureAudio(){ if(audioReady)return; initAudio(); if(!AC)return;                              // first gesture: just resume/unlock (iOS)
-  try{ AC.resume(); const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource(); s.buffer=b; s.connect(AC.destination); s.start(0); }catch(e){}
-  audioReady=true; }
-initAudio();                                                                       // pre-decode the soundfont on page load (suspended context is fine)
-['pointerdown','touchend','click'].forEach(ev=>addEventListener(ev,ensureAudio));   // unlock mobile WebAudio on the first gesture (iOS)
+function ensureAudio(){ if(audioReady)return;
+  try{ AC=new (window.AudioContext||window.webkitAudioContext)();                   // create INSIDE the gesture — iOS only unlocks reliably then
+    player=new WebAudioFontPlayer(); PRESET=window[PRESET_VAR];
+    AC.resume(); const b=AC.createBuffer(1,1,22050),s=AC.createBufferSource(); s.buffer=b; s.connect(AC.destination); s.start(0);  // unlock
+    player.loader.decodeAfterLoading(AC,PRESET_VAR); audioReady=true;                // decode now; the 'tap to start' tap gives it time before the swipe
+  }catch(e){} }
+['pointerdown','touchend','click'].forEach(ev=>addEventListener(ev,ensureAudio));   // 'tap to start' gesture: create + unlock + decode
 function trigger(midi,gain){ if(!audioReady)return; if(AC.state==='suspended')AC.resume();
   player.queueWaveTable(AC, AC.destination, PRESET, AC.currentTime, midi, 0.5, gain); }   // one-shot (note-add preview, Task 6)
 function voiceNoteAt(v,p){ const ns=seqOf(v);                                  // the note this voice should sound at playhead p

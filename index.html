@@ -2,17 +2,17 @@
 <meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Solo Choir — roll</title>
 <style>
-  html,body{margin:0;height:100%;background:#0d1418;overflow:hidden;touch-action:none;
-    font-family:ui-monospace,Menlo,monospace;color:#9fb0b8}
-  #c{display:block;width:100vw;height:100vh}
+  html,body{margin:0;height:100%;overflow:hidden;touch-action:none;
+    font-family:ui-monospace,Menlo,monospace;color:#3a4654;background:#EEF2F7}   /* cool white */
+  #c{display:block;width:100vw;height:100vh;position:relative;z-index:0}
   #hint{position:fixed;left:0;right:0;bottom:18px;text-align:center;font-size:12px;letter-spacing:.12em;
-    opacity:.7;pointer-events:none}
-  #err{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:24px;font-size:14px;white-space:pre-line}
+    color:#8493a6;pointer-events:none}
+  #err{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:24px;font-size:14px;white-space:pre-line;color:#475569}
   #tools{position:fixed;top:10px;left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:2}
-  #tools button{font:12px ui-monospace,Menlo,monospace;color:#9fb0b8;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:7px;padding:6px 10px}
-  #tools button[aria-pressed=true]{color:#0d1418;background:#cfe0e8}
+  #tools button{font:12px ui-monospace,Menlo,monospace;color:#5b6b80;background:rgba(255,255,255,.6);border:1px solid #d3dbe6;border-radius:7px;padding:6px 10px}
+  #tools button[aria-pressed=true]{color:#fff;background:#56657a;border-color:#56657a}
   #start{position:fixed;inset:0;z-index:3;display:grid;place-items:center;align-content:center;gap:10px;
-    text-align:center;background:rgba(13,20,24,.55);color:#cfe0e8;font-size:15px;line-height:1.7;
+    text-align:center;background:rgba(238,242,247,.86);color:#3f4d5e;font-size:15px;line-height:1.7;
     letter-spacing:.04em;transition:opacity .5s;pointer-events:auto;cursor:pointer}
   #start span{font-size:12px;opacity:.7}
   #start.hide{opacity:0;pointer-events:none}
@@ -24,7 +24,7 @@
 <div id=start>🔊 turn off silent mode<br>tap to start<br><span>then swipe up to play</span></div>
 <script src="./score-codec.js"></script>
 <script>
-const COL={Melody:"#e8eef2",Sop:"#16a34a",Alto:"#9333ea",Tenor:"#dc2626",Bass:"#2563eb"};
+const COL={Melody:"#56657a",Sop:"#54b89c",Alto:"#9a86d4",Tenor:"#e2867f",Bass:"#6f9bd8"};  // slate lead + balanced soft quartet (gallery palette)
 const VOICES=ScoreCodec.VOICES;
 const cv=document.getElementById('c'), ctx=cv.getContext('2d');
 let SCORE=null, PPS=140, playhead=0, lo=48, hi=72, DUR=1, W=0,H=0,dpr=1;
@@ -34,16 +34,23 @@ const seqOf=v=>v==="Melody"?SCORE.melody:SCORE.voices[v];
 function bounds(){ let L=127,Hh=0,d=0; for(const v of VOICES) for(const n of seqOf(v)){ L=Math.min(L,n.midi);Hh=Math.max(Hh,n.midi);d=Math.max(d,n.start+n.dur);} if(Hh<L){L=48;Hh=72;} lo=L-2;hi=Hh+2;DUR=Math.max(d,1); }
 const X=m=>20+(m-lo)/(hi-lo)*(W-40);            // pitch → x
 const Y=t=>H/2 + (t-playhead)*PPS;              // time → y (now-line at H/2)
-function draw(){ ctx.clearRect(0,0,W,H);
-  ctx.strokeStyle="rgba(255,255,255,.06)"; ctx.lineWidth=1;                    // octave gridlines (vertical)
-  for(let m=Math.ceil(lo);m<=hi;m++){ if(((m%12)+12)%12===0){ const x=X(m); ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); } }
-  ctx.strokeStyle="rgba(255,255,255,.28)"; ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke(); // now-line
-  for(const v of VOICES){ const lit=COL[v]; ctx.strokeStyle=lit; ctx.lineWidth=v==="Melody"?4:3; ctx.lineCap="round";
-    for(const n of seqOf(v)){ const y0=Y(n.start), y1=Y(n.start+n.dur); if(y1<-20||y0>H+20)continue;
-      const near=Math.abs((n.start+n.dur/2)-playhead)<0.12;                    // light up near the now-line
-      ctx.globalAlpha=near?1:0.5; ctx.beginPath(); ctx.moveTo(X(n.midi),y0); ctx.lineTo(X(n.midi),y1); ctx.stroke();
-      ctx.fillStyle=lit; ctx.beginPath(); ctx.arc(X(n.midi),y1,2.5,0,7); ctx.fill(); }   // tail handle (drag to resize length)
-  } ctx.globalAlpha=1; }
+function drawSeq(notes,col,thick){ if(!notes||!notes.length)return;            // studio-style coloured contour line + dots (vertical)
+  const ns=[...notes].sort((a,b)=>a.start-b.start);
+  ctx.strokeStyle=col; ctx.lineWidth=thick; ctx.lineJoin="round"; ctx.lineCap="round";
+  let i=0;
+  while(i<ns.length){ let n=ns[i]; ctx.beginPath(); ctx.moveTo(X(n.midi),Y(n.start)); ctx.lineTo(X(n.midi),Y(n.start+n.dur));
+    while(i+1<ns.length && Math.abs(ns[i+1].start-(ns[i].start+ns[i].dur))<0.05){       // connect contiguous notes
+      i++; n=ns[i]; ctx.lineTo(X(n.midi),Y(n.start)); ctx.lineTo(X(n.midi),Y(n.start+n.dur)); }
+    ctx.stroke(); i++; }
+  ctx.fillStyle=col; ns.forEach(n=>{ const act=playhead>=n.start&&playhead<n.start+n.dur;   // dot at start (bigger when under the reader) + tail handle
+    ctx.beginPath(); ctx.arc(X(n.midi),Y(n.start), act?4.5:3, 0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(X(n.midi),Y(n.start+n.dur), 3, 0,7); ctx.fill(); }); }
+function draw(){ ctx.clearRect(0,0,W,H);                                       // transparent → the beige-white paper (CSS) shows through
+  ctx.strokeStyle="rgba(60,80,110,.09)"; ctx.lineWidth=1;                       // faint vertical guide columns at each used pitch
+  const cols=new Set(); for(const v of VOICES) for(const n of seqOf(v)) cols.add(n.midi);
+  cols.forEach(m=>{ const x=Math.round(X(m))+0.5; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); });
+  ctx.strokeStyle="rgba(90,110,140,.34)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();  // reader line (now)
+  for(const v of VOICES) drawSeq(seqOf(v), COL[v], v==="Melody"?3.5:2.5); }
 function boot(){ const h=location.hash.replace(/^#/,"");   // base64url → no decodeURIComponent
   if(!h){ showErr("No card data."); return; }
   ScoreCodec.decodeScore(h).then(s=>{ SCORE=s; fit(); bounds(); playhead=-LEAD; draw(); })

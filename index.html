@@ -12,16 +12,16 @@
   #tools button{font:12px ui-monospace,Menlo,monospace;color:#9fb0b8;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:7px;padding:6px 10px}
   #tools button[aria-pressed=true]{color:#0d1418;background:#cfe0e8}
   #start{position:fixed;inset:0;z-index:3;display:grid;place-items:center;align-content:center;gap:10px;
-    text-align:center;background:rgba(13,20,24,.5);color:#cfe0e8;font-size:15px;line-height:1.7;
-    letter-spacing:.04em;transition:opacity .5s;pointer-events:none}
+    text-align:center;background:rgba(13,20,24,.55);color:#cfe0e8;font-size:15px;line-height:1.7;
+    letter-spacing:.04em;transition:opacity .5s;pointer-events:auto;cursor:pointer}
   #start span{font-size:12px;opacity:.7}
-  #start.hide{opacity:0}
+  #start.hide{opacity:0;pointer-events:none}
 </style></head><body>
 <canvas id=c></canvas>
 <div id=tools></div>
 <div id=hint>swipe ↑↓ play · tap add/del · drag tail = length</div>
 <div id=err></div>
-<div id=start>🔊 turn off silent mode for sound<br><span>swipe up to play</span></div>
+<div id=start>🔊 turn off silent mode<br>tap to start<br><span>then swipe up to play</span></div>
 <script src="./score-codec.js"></script>
 <script>
 const COL={Melody:"#e8eef2",Sop:"#16a34a",Alto:"#9333ea",Tenor:"#dc2626",Bass:"#2563eb"};
